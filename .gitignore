@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# MLflow artifacts and local run outputs
+mlflow/mlruns/
+mlruns/
+mlflow/monitoring/*.json
+
+# OS/editor noise
+.DS_Store
+.vscode/

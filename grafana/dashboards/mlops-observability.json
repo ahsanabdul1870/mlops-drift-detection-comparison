@@ -1,0 +1,49 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Drift Score Over Time",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "drift_score", "legendFormat": "{{detector}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Accuracy Degradation Curve",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "model_accuracy", "legendFormat": "accuracy", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Detector Comparison Panel",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "detector_time_seconds", "legendFormat": "{{detector}}", "refId": "A"},
+        {"expr": "retraining_trigger_time_seconds", "legendFormat": "retrain {{detector}}", "refId": "B"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Alert Timeline",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "increase(alert_count[5m])", "legendFormat": "alerts/5m", "refId": "A"}
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["mlops", "drift", "adult-income"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "MLOps Drift & Performance Dashboard",
+  "uid": "mlops-drift-dashboard",
+  "version": 1
+}

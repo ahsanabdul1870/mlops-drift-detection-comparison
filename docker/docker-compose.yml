@@ -1,0 +1,38 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: mlops-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../mlflow:/app/mlflow
+      - ../data:/app/data
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: mlops-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: mlops-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
