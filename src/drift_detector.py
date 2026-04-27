@@ -216,9 +216,10 @@ def run_all_experiments() -> None:
                 time_taken=float(result["time_taken"]),
             )
 
+            score_pct = float(result["drift_score"]) * 100.0
             print(
                 f"{detector_name.upper()} | {drift_level:<6} | "
-                f"score={result['drift_score']:.4f} | "
+                f"score={score_pct:.2f}% | "
                 f"detected={result['drift_detected']} | "
                 f"time={result['time_taken']:.4f}s"
             )
