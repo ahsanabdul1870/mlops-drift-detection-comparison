@@ -1,31 +1,67 @@
 
-# MLOps Drift Detection Comparison (Adult Income)
+# MLOps Drift Detection Comparison
 
-End-to-end MLOps project for:
+End-to-end MLOps project for comparing drift detectors on the Adult Income dataset.
 
-- baseline model training and tracking with MLflow
-- synthetic drift generation (light, medium, heavy)
-- detector benchmarking (KS, PSI, JS)
-- FastAPI model serving
-- Prometheus metrics collection
-- Grafana observability dashboards
-- GitHub Actions CI/CD with drift-triggered retraining
+The pipeline includes:
 
-## 1. What This Project Does
+- baseline model training and MLflow tracking
+- synthetic drift generation for clean, light, medium, and heavy drift
+- drift detector benchmarking with KS, PSI, and Jensen-Shannon
+- FastAPI model serving and Prometheus metrics export
+- Grafana dashboards for drift and performance monitoring
+- GitHub Actions drift checks with retraining triggers
 
-This project uses the UCI Adult Income dataset and compares drift detectors under controlled drift levels.
+## Overview
 
-You can:
+This project answers a practical question: which drift detector reacts earliest, which one is more conservative, and how can drift be connected to monitoring and retraining in a reproducible MLOps workflow?
 
-1. Train a baseline Random Forest model on clean data.
-2. Generate drifted datasets (10%, 30%, 60%).
-3. Run KS/PSI/JS drift experiments and log all results to MLflow.
-4. Serve model predictions via FastAPI at /predict.
-5. Export operational metrics via /metrics for Prometheus.
-6. Visualize drift, accuracy degradation, detector performance, and alerts in Grafana.
-7. Use CI/CD to run tests, build image, run drift checks, and auto-trigger retraining.
+It uses the UCI Adult Income dataset to build a small but complete system:
 
-## 2. Project Structure
+1. Generate clean and drifted datasets.
+2. Train a baseline Random Forest model.
+3. Compare KS, PSI, and JS detectors.
+4. Store monitoring state for the API and dashboard.
+5. Serve predictions with FastAPI.
+6. Export metrics to Prometheus.
+7. Visualize the results in Grafana.
+8. Trigger retraining in CI when drift is detected.
+
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+  A[Adult Income Dataset] --> B[drift_simulator.py]
+  B --> C[data_clean.csv]
+  B --> D[data_drift_light.csv]
+  B --> E[data_drift_medium.csv]
+  B --> F[data_drift_heavy.csv]
+
+  C --> G[train.py]
+  G --> H[MLflow Tracking]
+  G --> I[mlflow/serving_model]
+  I --> J[api.py FastAPI]
+
+  D --> K[drift_detector.py]
+  E --> K
+  F --> K
+  C --> K
+
+  K --> L[monitor.py State File]
+  L --> J
+  J --> M[Prometheus /metrics Scrape]
+  M --> N[Grafana Dashboard]
+
+  K --> O[ci_drift_guard.py]
+  O --> P[retrain.py]
+  P --> G
+
+  K --> Q[report.md]
+  J --> Q
+  N --> Q
+```
+
+## Project Structure
 
 ```text
 .
@@ -36,18 +72,16 @@ You can:
 │   ├── data_drift_medium.csv
 │   └── data_drift_heavy.csv
 ├── src/
-│   ├── api.py                 # FastAPI service (/predict, /metrics, /health)
-│   ├── ci_drift_guard.py      # CI drift check + outputs for GitHub Actions
-│   ├── drift_detector.py      # KS, PSI, JS detectors + MLflow logging
-│   ├── drift_simulator.py     # Generates clean/light/medium/heavy datasets
-│   ├── monitor.py             # Runtime monitoring state helper
-│   ├── retrain.py             # Drift-triggered retraining entrypoint
-│   └── train.py               # Baseline and reusable training pipeline
+│   ├── api.py
+│   ├── ci_drift_guard.py
+│   ├── drift_detector.py
+│   ├── drift_simulator.py
+│   ├── monitor.py
+│   ├── retrain.py
+│   └── train.py
 ├── docker/
 │   ├── Dockerfile
 │   └── docker-compose.yml
-├── prometheus/
-│   └── prometheus.yml
 ├── grafana/
 │   ├── dashboards/
 │   └── provisioning/
@@ -55,30 +89,30 @@ You can:
 │   ├── mlruns/
 │   ├── monitoring/
 │   └── serving_model/
+├── prometheus/
+│   └── prometheus.yml
 ├── tests/
-├── .github/workflows/
-│   └── ci_cd.yml
+├── report.md
 ├── requirements.txt
 └── README.md
 ```
 
-## 3. Prerequisites
+## Prerequisites
 
-Local:
+You need:
 
-- Python 3.11+
-- pip
-- virtual environment support
-- Docker + Docker Compose
+- Python 3.11 or newer
+- pip and virtual environment support
+- Docker and Docker Compose
 
-Optional but useful:
+Helpful tools:
 
 - curl
 - jq
 
-## 4. Quick Start (Local Python)
+## Quick Start
 
-From project root:
+From the project root:
 
 ```bash
 cd /home/ahsan/Videos/mlops/project
@@ -90,33 +124,33 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Generate datasets:
+Generate the synthetic datasets:
 
 ```bash
 python src/drift_simulator.py
 ```
 
-Train baseline model and log benchmark:
+Train the baseline model and log metrics to MLflow:
 
 ```bash
 python src/train.py
 ```
 
-Run detector experiments across all drift levels:
+Run the full drift comparison:
 
 ```bash
 python src/drift_detector.py
 ```
 
-Run tests:
+Run the tests:
 
 ```bash
 pytest tests -q
 ```
 
-## 5. Start the API (Local)
+## Run The API
 
-The API serves the current model from mlflow/serving_model.
+The FastAPI service loads the saved MLflow model and exposes health, prediction, and metrics endpoints.
 
 ```bash
 uvicorn src.api:app --host 0.0.0.0 --port 8000
@@ -124,41 +158,40 @@ uvicorn src.api:app --host 0.0.0.0 --port 8000
 
 Endpoints:
 
-- GET http://localhost:8000/health
-- POST http://localhost:8000/predict
-- GET http://localhost:8000/metrics
+- `GET /health`
+- `POST /predict`
+- `GET /metrics`
 
 Example prediction request:
 
 ```bash
 curl -X POST "http://localhost:8000/predict" \
-	-H "Content-Type: application/json" \
-	-d '[
-		{
-			"age": 39,
-			"workclass": "Private",
-			"fnlwgt": 77516,
-			"education": "Bachelors",
-			"educational-num": 13,
-			"marital-status": "Never-married",
-			"occupation": "Adm-clerical",
-			"relationship": "Not-in-family",
-			"race": "White",
-			"gender": "Male",
-			"capital-gain": 2174,
-			"capital-loss": 0,
-			"hours-per-week": 40,
-			"native-country": "United-States"
-		}
-	]'
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "age": 39,
+      "workclass": "Private",
+      "fnlwgt": 77516,
+      "education": "Bachelors",
+      "educational-num": 13,
+      "marital-status": "Never-married",
+      "occupation": "Adm-clerical",
+      "relationship": "Not-in-family",
+      "race": "White",
+      "gender": "Male",
+      "capital-gain": 2174,
+      "capital-loss": 0,
+      "hours-per-week": 40,
+      "native-country": "United-States"
+    }
+  ]'
 ```
 
-## 6. Run the Whole Stack (Docker + Prometheus + Grafana)
+## Run The Full Observability Stack
 
-This starts API, Prometheus, and Grafana together.
+The Docker Compose file starts the API, Prometheus, and Grafana together.
 
 ```bash
-cd /home/ahsan/Videos/mlops/project
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
@@ -167,74 +200,112 @@ Services:
 - API: http://localhost:8000
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000
-	- username: admin
-	- password: admin
 
-Stop stack:
+Grafana login:
+
+- username: `admin`
+- password: `admin`
+
+Stop the stack:
 
 ```bash
 docker compose -f docker/docker-compose.yml down
 ```
 
-## 7. MLflow Tracking
+## MLflow Tracking
 
-Runs are logged in mlflow/mlruns.
+MLflow stores experiment runs in `mlflow/mlruns`.
 
-Start MLflow UI locally:
+Start the MLflow UI locally:
 
 ```bash
 mlflow ui --backend-store-uri mlflow/mlruns --host 0.0.0.0 --port 5000
 ```
 
-Open: http://localhost:5000
+Open:
 
-Key experiments:
+- http://localhost:5000
 
-- adult_income_baseline
-- adult_income_drift_detection
-- adult_income_ci_drift_guard
-- adult_income_retraining
+Tracked experiments include:
 
-## 8. Grafana Dashboard Panels
+- `adult_income_baseline`
+- `adult_income_drift_detection`
+- `adult_income_ci_drift_guard`
+- `adult_income_retraining`
 
-Pre-provisioned dashboard includes:
+## Grafana Dashboard
 
-1. Drift score over time.
-2. Accuracy degradation curve.
-3. Detector comparison panel.
-4. Alert timeline.
+The Grafana dashboard is provisioned automatically and includes:
 
-Prometheus scrape interval is set to 15 seconds in [prometheus/prometheus.yml](prometheus/prometheus.yml).
+- drift score over time
+- accuracy degradation curve
+- detector comparison panel
+- alert timeline
 
-## 9. CI/CD Flow (GitHub Actions)
+Prometheus scrapes the API every 15 seconds using [prometheus/prometheus.yml](prometheus/prometheus.yml).
 
-Workflow file: [.github/workflows/ci_cd.yml](.github/workflows/ci_cd.yml)
+## CI/CD Drift Flow
 
-On push/PR:
+The GitHub Actions workflow in [.github/workflows/ci_cd.yml](.github/workflows/ci_cd.yml) runs:
 
-1. Run unit tests.
-2. Build Docker image.
-3. Run drift guard checks.
-4. If drift is detected:
-	 - trigger retraining,
-	 - log retraining run to MLflow,
-	 - redeploy API container,
-	 - log retraining trigger timing.
+1. unit tests
+2. Docker image build
+3. drift guard checks
+4. retraining when drift is detected
 
-## 10. Recommended Run Order
+When drift is found, the pipeline can:
 
-If you are running everything from scratch:
+- trigger retraining
+- log the retraining run to MLflow
+- update monitoring state
+- record retraining trigger timing
 
-1. python src/drift_simulator.py
-2. python src/train.py
-3. python src/drift_detector.py
-4. uvicorn src.api:app --host 0.0.0.0 --port 8000
-5. docker compose -f docker/docker-compose.yml up -d --build
-6. mlflow ui --backend-store-uri mlflow/mlruns --host 0.0.0.0 --port 5000
+## Detector Behavior
 
-## 11. Notes
+The project compares three detectors:
 
-- If /predict fails, retrain first to ensure mlflow/serving_model exists.
-- Monitor state is persisted at mlflow/monitoring/state.json.
-- CI drift report is written to mlflow/monitoring/ci_drift_report.json.
+- KS: most sensitive in this setup
+- PSI: most conservative in this setup
+- JS: balanced between the two
+
+Observed results from `python src/drift_detector.py`:
+
+| Detector | Clean | Light | Medium | Heavy | Behavior |
+| --- | ---: | ---: | ---: | ---: | --- |
+| KS | 0.0000 | 0.0401 | 0.1128 | 0.2922 | Detects light, medium, and heavy drift |
+| PSI | 0.0000 | 0.0005 | 0.0330 | 0.3215 | Detects heavy drift only |
+| JS | 0.0000 | 0.0182 | 0.1300 | 0.2737 | Detects medium and heavy drift |
+
+## Monitoring State
+
+The runtime state used by the API and dashboard is stored in `mlflow/monitoring/state.json`.
+
+It contains:
+
+- latest accuracy
+- drift scores per detector
+- drift detection flags
+- alert count
+- detector execution time
+- retraining trigger time
+
+The CI drift report is written to `mlflow/monitoring/ci_drift_report.json`.
+
+## Recommended Run Order
+
+If you are starting from scratch, run the project in this order:
+
+1. `python src/drift_simulator.py`
+2. `python src/train.py`
+3. `python src/drift_detector.py`
+4. `uvicorn src.api:app --host 0.0.0.0 --port 8000`
+5. `docker compose -f docker/docker-compose.yml up -d --build`
+6. `mlflow ui --backend-store-uri mlflow/mlruns --host 0.0.0.0 --port 5000`
+
+## Notes
+
+- If `/predict` fails, run training again so `mlflow/serving_model` exists.
+- Prometheus must be able to reach the API service on port 8000.
+- Grafana reads its datasource and dashboard provisioning from the `grafana/` folder.
+- A full report for this project is available in [report.md](report.md).
 
